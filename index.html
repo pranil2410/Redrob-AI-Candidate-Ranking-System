@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redrob AI Candidate Ranking System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body class="dark-mode">
+  <div class="glow-bg">
+    <div class="glow-circle gc-1"></div>
+    <div class="glow-circle gc-2"></div>
+  </div>
+
+  <header>
+    <div class="logo">
+      <span class="redrob-text">redrob</span>
+      <span class="badge">Talent Intelligence</span>
+    </div>
+    <h1>Senior AI Engineer Ranking Portal</h1>
+    <p class="subtitle">Evaluate and rank candidates dynamically using custom weighted constraints, honeypot filtering, and semantic matching.</p>
+  </header>
+
+  <main class="dashboard">
+    <!-- Sidebar Controls -->
+    <section class="sidebar glass">
+      <div class="section-title">
+        <h2>Scoring Weights</h2>
+        <span class="reset-btn" id="reset-weights">Reset</span>
+      </div>
+      <p class="section-desc">Adjust the parameters below. Weights will automatically normalize to sum to 100%.</p>
+
+      <div class="weight-control">
+        <label for="w-tech">Technical Match: <span id="val-tech">35%</span></label>
+        <input type="range" id="w-tech" min="0" max="100" value="35">
+      </div>
+
+      <div class="weight-control">
+        <label for="w-exp">Experience Relevance: <span id="val-exp">20%</span></label>
+        <input type="range" id="w-exp" min="0" max="100" value="20">
+      </div>
+
+      <div class="weight-control">
+        <label for="w-ai">AI Production Experience: <span id="val-ai">15%</span></label>
+        <input type="range" id="w-ai" min="0" max="100" value="15">
+      </div>
+
+      <div class="weight-control">
+        <label for="w-ret">Retrieval / Search Experience: <span id="val-ret">10%</span></label>
+        <input type="range" id="w-ret" min="0" max="100" value="10">
+      </div>
+
+      <div class="weight-control">
+        <label for="w-beh">Behavioral Signals: <span id="val-beh">10%</span></label>
+        <input type="range" id="w-beh" min="0" max="100" value="10">
+      </div>
+
+      <div class="weight-control">
+        <label for="w-loc">Location / Notice Fit: <span id="val-loc">5%</span></label>
+        <input type="range" id="w-loc" min="0" max="100" value="5">
+      </div>
+
+      <div class="weight-control">
+        <label for="w-sim">Semantic Similarity: <span id="val-sim">5%</span></label>
+        <input type="range" id="w-sim" min="0" max="100" value="5">
+      </div>
+
+      <div class="total-weights-indicator">
+        <span>Combined Weight Total:</span>
+        <span id="weight-sum">100%</span>
+      </div>
+
+      <hr class="divider">
+
+      <div class="section-title">
+        <h2>Input Pool</h2>
+      </div>
+      
+      <!-- File uploader -->
+      <div class="file-uploader" id="drop-zone">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload-cloud"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 12 8 16"></polyline></svg>
+        <p>Drag & drop <strong>candidates.jsonl</strong> or <strong>sample_candidates.json</strong> here</p>
+        <span>or click to browse files</span>
+        <input type="file" id="file-input" accept=".json,.jsonl">
+      </div>
+
+      <div class="file-info hidden" id="file-info-container">
+        <div class="file-meta">
+          <span class="file-name" id="selected-file-name">candidates.json</span>
+          <span class="file-size" id="selected-file-size">300 KB</span>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary btn-block" id="process-btn" disabled>Rank Candidates</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Results Section -->
+    <section class="results-container glass">
+      <div class="results-header">
+        <div class="stats-panel">
+          <div class="stat-card">
+            <span class="stat-label">Total Pool</span>
+            <span class="stat-value" id="stat-pool">-</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Honeypots Detected</span>
+            <span class="stat-value text-red" id="stat-honeypots">-</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Valid Ranked</span>
+            <span class="stat-value" id="stat-valid">-</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary hidden" id="download-csv-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Export final_submission.csv
+        </button>
+      </div>
+
+      <div class="empty-state" id="empty-state-view">
+        <div class="empty-icon">🔍</div>
+        <h3>No Candidates Processed Yet</h3>
+        <p>Upload a candidates list from the sidebar and adjust your weights to compute the ranking.</p>
+        <div class="shortcut-box">
+          <p>💡 Don't have a file? Click below to use the built-in sample candidates dataset.</p>
+          <button class="btn btn-outline" id="load-sample-btn">Load Demo Pool</button>
+        </div>
+      </div>
+
+      <div class="loading-state hidden" id="loading-state-view">
+        <div class="spinner"></div>
+        <h3>Matching & Scoring Candidates...</h3>
+        <p>Running timeline audits, checking skill proficiencies, and calculating dynamic semantic relevance.</p>
+      </div>
+
+      <!-- Rankings Table -->
+      <div class="table-wrapper hidden" id="table-view">
+        <table class="rankings-table">
+          <thead>
+            <tr>
+              <th style="width: 80px">Rank</th>
+              <th>Candidate Info</th>
+              <th style="width: 120px">Total Score</th>
+              <th>Match Reasoning</th>
+            </tr>
+          </thead>
+          <tbody id="rankings-tbody">
+            <!-- Row data injected here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Detailed Modal -->
+  <div class="modal-backdrop hidden" id="detail-modal">
+    <div class="modal glass">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-name">Anonymized Candidate</h2>
+          <span class="modal-sub" id="modal-title-company">Software Engineer at Company</span>
+        </div>
+        <button class="close-btn" id="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-section">
+          <h3>Weighted Score Breakdown</h3>
+          <div class="score-breakdown-list" id="modal-breakdown">
+            <!-- Breakdown items injected here -->
+          </div>
+        </div>
+        
+        <div class="modal-section">
+          <h3>Details</h3>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">Candidate ID</span>
+              <span class="detail-val" id="modal-id">-</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Years of Experience</span>
+              <span class="detail-val" id="modal-years">-</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Location</span>
+              <span class="detail-val" id="modal-location">-</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Status</span>
+              <span class="detail-val" id="modal-status">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-section">
+          <h3>Honeypot Audit Report</h3>
+          <div class="audit-status" id="modal-audit-status">
+            ✅ Profile verified. No structural anomalies detected.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
